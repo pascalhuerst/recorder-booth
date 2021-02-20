@@ -144,7 +144,8 @@ func main() {
 
 	manager := storage.NewManager()
 	manager.Add(storage.NewSnapcastStorageHandler("/tmp/stream-pipe", "RecorderBooth"))
-	manager.Add(storage.NewChunkStorageHandler("/tmp/chunks", "RecorderBooth", 1024*32))
+	//manager.Add(storage.NewChunkStorageHandler("/tmp/chunks", "RecorderBooth", 1024*32))
+	manager.Add(storage.NewHTTPStorageHandler("http://server.lan:8080/upload", "RecorderBooth", 1024*1024))
 
 	recorder := audio.NewRecorder(recordDevice, cfg, manager.InputChannel(), analyzer.InputChannel())
 	err = recorder.Start()
