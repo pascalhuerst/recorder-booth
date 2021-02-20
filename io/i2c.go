@@ -1,4 +1,4 @@
-package main
+package io
 
 import (
 	"fmt"
@@ -9,17 +9,17 @@ import (
 
 // I2C abstracts an i2c-dev device
 type I2C struct {
-	l    byte
-	file *os.File
-	addr byte
-	mu   sync.Mutex
+	busNumber byte
+	file      *os.File
+	addr      byte
+	mu        sync.Mutex
 
 	initialized bool
 }
 
 // NewI2C factory
-func NewI2C(l byte) *I2C {
-	return &I2C{l: l}
+func NewI2C(busNumber byte) *I2C {
+	return &I2C{busNumber: busNumber}
 }
 
 const (
@@ -47,7 +47,7 @@ func (b *I2C) init() error {
 	}
 
 	var err error
-	if b.file, err = os.OpenFile(fmt.Sprintf("/dev/i2c-%v", b.l), os.O_RDWR, os.ModeExclusive); err != nil {
+	if b.file, err = os.OpenFile(fmt.Sprintf("/dev/i2c-%v", b.busNumber), os.O_RDWR, os.ModeExclusive); err != nil {
 		return err
 	}
 

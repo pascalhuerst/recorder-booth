@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"sync/atomic"
+	"time"
 
 	"github.com/yobert/alsa"
 )
@@ -24,6 +25,12 @@ type Frame struct {
 	Right int16
 }
 
+// Metrics metrics
+type Metrics struct {
+	Duration  time.Duration
+	BytesRead uint64
+}
+
 // Recorder can record audio
 type Recorder struct {
 	device *alsa.Device
@@ -36,19 +43,21 @@ type Recorder struct {
 	ctx       context.Context
 	shutdown  context.CancelFunc
 
-	rawStream   chan []byte
-	frameStream chan []Frame
+	rawStream     chan []byte
+	frameStream   chan []Frame
+	metricsStream chan Metrics
 }
 
 // NewRecorder recorder factory
-func NewRecorder(device *alsa.Device, config Config, rawStream chan []byte, frameStream chan []Frame) *Recorder {
+func NewRecorder(device *alsa.Device, config Config, rawStream chan []byte, frameStream chan []Frame, metricsStream chan Metrics) *Recorder {
 	return &Recorder{
-		device:      device,
-		buffer:      alsa.Buffer{},
-		config:      config,
-		isRunning:   0,
-		rawStream:   rawStream,
-		frameStream: frameStream,
+		device:        device,
+		buffer:        alsa.Buffer{},
+		config:        config,
+		isRunning:     0,
+		rawStream:     rawStream,
+		frameStream:   frameStream,
+		metricsStream: metricsStream,
 	}
 }
 
@@ -122,6 +131,12 @@ func (a *Recorder) run() {
 	a.ctx = ctx
 	a.shutdown = shutdown
 
+	metrics := Metrics{
+		BytesRead: 0,
+		Duration:  0,
+	}
+	startTime := time.Now()
+
 setup:
 	err := a.setup()
 	if err != nil {
@@ -143,6 +158,7 @@ setup:
 				a.device.Close()
 				goto setup
 			}
+			metrics.BytesRead += uint64(len(a.buffer.Data))
 
 			if a.rawStream != nil {
 				a.rawStream <- a.buffer.Data
@@ -163,6 +179,12 @@ setup:
 				}
 				a.frameStream <- frames
 			}
+
+			if a.metricsStream != nil {
+				metrics.Duration = time.Now().Sub(startTime)
+				a.metricsStream <- metrics
+			}
+
 		}
 	}
 }

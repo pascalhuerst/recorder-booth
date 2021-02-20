@@ -51,35 +51,42 @@ func fmtDuration(d time.Duration) string {
 
 func (s *RecordStatusScreen) update() {
 
+	s.init()
+
 	for {
 		s.mutex.Lock()
-		s.d.drawProgressBar( /*y*/ 20, 120, 6, float32(s.level))
 		s.level *= 0.98
+		s.refresh()
 		s.mutex.Unlock()
-		time.Sleep(time.Millisecond * 20)
+		time.Sleep(time.Millisecond * 40)
 	}
 }
 
+func (s *RecordStatusScreen) init() {
+
+	fontHeightBig := s.d.textFaceBig.Metrics().Height.Ceil()
+
+	y := fontHeightBig
+
+	s.d.clear()
+	s.d.drawTextAt(1, y, s.title, true, alignLeft)
+	y += 4
+
+	s.d.drawHorizontalLine(1, 128, y)
+	y += 20
+
+}
+
 func (s *RecordStatusScreen) refresh() {
-	/*
-		fontHeightBig := s.d.textFaceBig.Metrics().Height.Ceil()
-		fontHeightSmall := s.d.textFaceSmall.Metrics().Height.Ceil()
 
-		y := fontHeightBig
+	y := 32
+	fontHeightSmall := s.d.textFaceSmall.Metrics().Height.Ceil()
+	s.d.drawProgressBar(y, 120, 6, float32(s.level))
 
-		s.d.clear()
-		s.d.drawTextAt(1, y, s.title, true, alignLeft)
-		y += 4
+	y += 12 + fontHeightSmall
 
-		s.d.drawHorizontalLine(1, 128, y)
-		y += 20
-	*/
-	s.d.drawProgressBar( /*y*/ 20, 120, 6, float32(s.level))
-	/*
-		y += 12 + fontHeightSmall
+	s.d.drawTextAt(4, y, fmt.Sprintf("%s", fmtDuration(s.duration)), false, alignLeft)
 
-		s.d.drawTextAt(4, y, fmt.Sprintf("%s", fmtDuration(s.duration)), false, alignLeft)
-	*/
 }
 
 // NewRecordStatusScreen factory

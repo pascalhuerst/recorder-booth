@@ -3,7 +3,7 @@ package storage
 import (
 	"bytes"
 	"fmt"
-	"io"
+	"math"
 	"mime/multipart"
 	"net/http"
 	"strconv"
@@ -37,12 +37,23 @@ func NewHTTPStorageHandler(server, recoderID string, chunkSize int) *HTTPStorage
 
 func (hus *HTTPStorageHandler) store(b []byte) {
 
-	hus.buffer.Write(b)
+	n, err := hus.buffer.Write(b)
+	if err != nil || n != len(b) {
+		fmt.Printf("ERROR 1: %v n=%d\n", err, n)
+	}
+
 	if hus.buffer.Len() >= hus.chunkSize {
 
-		toSend := make([]byte, hus.chunkSize)
-		hus.buffer.Read(toSend)
-		toSendBuffer := bytes.NewBuffer(toSend)
+		r := 0
+		var toSend []byte
+		for i := hus.chunkSize; i != 0; i -= r {
+			toSend = make([]byte, int(math.Min(float64(i), float64(hus.chunkSize))))
+
+			r, err = hus.buffer.Read(toSend)
+			if err != nil {
+				fmt.Printf("Cannot read from byte buffer: %v  len(toSend)=%d hus.buffer.Len=%d\n", err, len(toSend), hus.buffer.Len())
+			}
+		}
 
 		var requestBody bytes.Buffer
 		multiPartWriter := multipart.NewWriter(&requestBody)
@@ -52,12 +63,12 @@ func (hus *HTTPStorageHandler) store(b []byte) {
 
 		fileWriter, err := multiPartWriter.CreateFormFile("raw_audio", fileName)
 		if err != nil {
-			fmt.Printf("Cannot create multi part file writer: %v\n")
+			fmt.Printf("Cannot create multi part file writer: %v\n", err)
 		}
 
-		_, err = io.Copy(fileWriter, toSendBuffer)
+		n, err := fileWriter.Write(toSend)
 		if err != nil {
-			fmt.Printf("Cannot write frames into form: %v\n", err)
+			fmt.Printf("Cannot write frames into form: %v n=%d\n", err, n)
 		}
 		multiPartWriter.Close()
 
@@ -79,5 +90,6 @@ func (hus *HTTPStorageHandler) store(b []byte) {
 		if response.StatusCode != http.StatusOK {
 			fmt.Print("HTTPStorageHandlker: Response was not good!\n")
 		}
+
 	}
 }

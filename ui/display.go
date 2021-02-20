@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"image/draw"
 	"io/ioutil"
 	"path"
@@ -38,6 +39,24 @@ func (d *Display) clear() {
 	draw.Draw(d.target, d.target.Bounds(), d.bg, image.ZP, draw.Src)
 }
 
+// DrawImage dras an image
+func (d *Display) DrawImage(img image.Image) {
+
+	d.clear()
+
+	for y := img.Bounds().Min.Y; y < img.Bounds().Max.Y; y++ {
+		for x := img.Bounds().Min.X; x < img.Bounds().Max.X; x++ {
+			c := color.GrayModel.Convert(img.At(x, y)).(color.Gray)
+			if c.Y > 0 {
+				draw.Draw(d.target, image.Rect(x, y, x+1, y+1), d.fg, image.ZP, draw.Src)
+			} else {
+				draw.Draw(d.target, image.Rect(x, y, x+1, y+1), d.bg, image.ZP, draw.Src)
+			}
+		}
+	}
+
+}
+
 func (d *Display) drawTextAt(x, y int, text string, isBig bool, align alignement) {
 
 	drawer := d.textDrawerSmall
@@ -57,6 +76,8 @@ func (d *Display) drawTextAt(x, y int, text string, isBig bool, align alignement
 		drawer.Dot.X -= adv / 2
 	}
 
+	b, _ := drawer.BoundString(text)
+	draw.Draw(d.target, image.Rect(b.Min.X.Ceil(), b.Min.Y.Ceil(), b.Max.X.Ceil(), b.Max.Y.Ceil()), d.bg, image.ZP, draw.Src)
 	drawer.DrawString(text)
 }
 
