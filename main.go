@@ -50,6 +50,10 @@ func main() {
 
 	//////////////////////////////
 
+	bus := NewI2C(1)
+
+	///////////////////////////////
+
 	cfg := audio.Config{
 		BufferSize: 1024,
 		Channels:   2,
@@ -111,8 +115,19 @@ func main() {
 	headroomCh := make(chan audio.HeadroomAnalyzerResult)
 	go func() {
 		counter := 0
+		lastClippingCount := 0
+
 		for {
 			v := <-headroomCh
+			// Test: Turn on red led
+			if v.ClippingCount > lastClippingCount {
+				bus.WriteByte(0x20, 0x00)
+			} else {
+				bus.WriteByte(0x20, 0x01)
+			}
+
+			lastClippingCount = v.ClippingCount
+
 			counter++
 			if counter >= 100 {
 				counter = 0

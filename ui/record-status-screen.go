@@ -54,7 +54,7 @@ func (s *RecordStatusScreen) update() {
 	for {
 		s.mutex.Lock()
 		s.d.drawProgressBar( /*y*/ 20, 120, 6, float32(s.level))
-		s.level *= 0.8
+		s.level *= 0.98
 		s.mutex.Unlock()
 		time.Sleep(time.Millisecond * 20)
 	}
